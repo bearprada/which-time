@@ -16,21 +16,28 @@
 # under the License.
 
 import os.path
+import os
 import tornado.auth
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
+import tornado.autoreload
 import json
 import urlparse
 import urllib
 import httplib2
+import pymongo
 import datetime
+from pymongo import MongoClient
 
 from tornado.options import define, options
 
 define("port", default=os.environ['PORT'], help="run on the given port", type=int)
+
+
+MONGO_URL ='mongodb://prada:888999@linus.mongohq.com:10038/app15412979'
 
 
 # production env
@@ -44,6 +51,11 @@ define("facebook_secret", help="your Facebook application secret",
 define("facebook_api_key", help="Facebook application API key", default="443987802343405")
 define("facebook_secret", help="Facebook application secret", default="8a077bcde3dbbd611bb7dcada3ef5b75")
 """
+
+conn = pymongo.Connection(MONGO_URL)
+db = conn['app15412979']
+user_log = db.user_log
+
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
@@ -63,6 +75,11 @@ class Application(tornado.web.Application):
             debug=True,
             autoescape=None,
         )
+
+        for (path, dirs, files) in os.walk(settings["template_path"]):
+            for item in files:
+                tornado.autoreload.watch(os.path.join(path, item))
+
         tornado.web.Application.__init__(self, handlers, **settings)
 
 
@@ -108,8 +125,12 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
 
             d = sorted(self.op["timeline"], key=lambda k: k['lc'],reverse=True)
             for i in range(0,10):
-                d[i]['rt'] = datetime.datetime.fromtimestamp(d[i]['t']).strftime('%Y-%m-%d %H:%M:%S')
                 self.op["max"].append(d[i])
+            log = { "user": self.current_user,
+                    "result": self.op["max"],
+                    "date": datetime.datetime.utcnow()}
+            log_id = user_log.insert(log)
+            print log_id
             """
             {
   "data": [
@@ -128,7 +149,6 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
   ]
 }
             """
-
             self._output()
 
     def _output(self):
@@ -165,6 +185,7 @@ class AuthLogoutHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
         self.clear_cookie("user")
         self.redirect(self.get_argument("next", "/"))
 
+
 def main():
     tornado.options.parse_command_line()
     http_server = tornado.httpserver.HTTPServer(Application())
@@ -174,3 +195,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -15,11 +15,6 @@
         padding-top: 60px;
         padding-bottom: 40px;
       }
-
-      .result{
-        height:800px;
-      }
-
       /* Ajax Loader styles */
       .ajax_loader {background: url("{{static_url("img/spinner_squares_circle.gif")}}") no-repeat center center transparent;width:100%;height:100%;}
       .blue-loader .ajax_loader {background: url("{{static_url("img/loader_blue.gif")}}") no-repeat center center transparent;}
@@ -46,6 +41,23 @@ path {
   stroke: #fff;
   fill-opacity: .125;
   shape-rendering: crispEdges;
+}
+
+.title-unit {
+  padding: 60px;
+  margin-bottom: 30px;
+  font-size: 18px;
+  font-weight: 200;
+  line-height: 30px;
+  color: inherit;
+  background-color: rgb(235, 154, 134);
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  border-radius: 6px;
+}
+
+.navbar-inverse .navbar-inner {
+  background-color:red;
 }
 
 </style>
@@ -90,7 +102,7 @@ path {
 
     <div class="container">
       <!--<img src="http://farm9.staticflickr.com/8034/8047426928_d3ac0f2230.jpg" alt="am 7:00">-->
-      <div class="hero-unit">
+      <div class="title-unit">
         <h1>什麼時候發文最多人理您？！</h1>
         <p>明明自己很有人氣，卻有時發文得到讚卻那麼少？明明照片就很可愛，為什麼沒有引起別人的討論？</p>
         <p>在這裡，您能夠找到屬於自己最佳的發文時間！</p>
@@ -100,6 +112,7 @@ path {
           {% else %}
             <a href="/auth/login" class="btn btn-primary btn-large">登入臉書</a>
           {% end %}
+            <button id="btn-share" class="btn btn-large" style="display: none;">分享統計結果</button>
         </p>
       </div>
 
@@ -119,6 +132,7 @@ path {
         <p>&copy; Prada Lab 2013</p>
       </footer>
       <div id="fb-root"></div>
+    </div> <!-- /container -->
 
 <script>(function(d, s, id) {
   var js, fjs = d.getElementsByTagName(s)[0];
@@ -128,9 +142,6 @@ path {
   fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'facebook-jssdk'));</script>
 
-
-    </div> <!-- /container -->
-
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -138,15 +149,21 @@ path {
     <script src="static/js/bootstrap.min.js"></script>
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script type="text/javascript" id="loader" src="{{static_url("js/script.js")}}" ></script>
-
+    <script src="https://raw.github.com/timrwood/moment/2.0.0/min/moment.min.js"></script>
 
     <script>
+      var analysisedContent = "";
 
       var progressBox = null;
       $("#btn_start").click(function() {
           progressBox = new ajaxLoader($('.root'));
           showresult();
-      }); 
+      });
+
+      $("#btn-share").click(function() {
+        console.log(analysisedContent);
+        window.open("https://www.facebook.com/dialog/feed?app_id=301523489981408&link=http://which-time@.erokuapp.com&picture=http://fbrell.com/f8.jpg&name=Which Time&caption=找到屬於自己最佳的發文時間!&description="+analysisedContent+"&redirect_uri=http://which-time.herokuapp.com",'分享');
+      });
 
     function showresult(){
 var margin = {top: 10, right: 10, bottom: 100, left: 40},
@@ -209,7 +226,7 @@ d3.json("locki", function(data_ori) {
   // clean the original data
   //$('#text_result').empty();
   //$(".result.span12").empty();
-
+  $("#btn-share").show();
 
   var data = data_ori.timeline;
 
@@ -257,16 +274,18 @@ d3.json("locki", function(data_ori) {
   var max_datas = data_ori.max;
   var tlen = max_datas.length;
 
-  r = r + '<div class="span10">';
+  r = r + '<div class="row">';
+  //TODO add share button
   for(var i = 0 ; i< tlen ; i++){
     var d = max_datas[i];
-    r = r + '<h3>' + d.rt + '</h3>' +
-       '<h5><a href="'+d.l+'" target="_blenk">'+d.c + "</a></h5>" +
-       "<p>讚:" + d.lc + "次,留言:" + d.cc+"次</p>";
+    var t = moment.unix(d.t).format('MMMM Do YYYY, h:mm:ss a');
+    analysisedContent += "   NO"+(i+1)+". "+d.c+" 讚:"+d.lc+" 留言:"+d.cc+" "+t+"\n";
+    r = r + '<div class="span6"><h3>' + t + '</h3>' +
+       '<p><a href="'+d.l+'" target="_blenk">'+d.c + "</a></p>" +
+       "<p>讚:" + d.lc + "次,留言:" + d.cc+"次</p></div>";
   }
   r = r + '</div>'
   $('.text_result').html(r);
-
 });
 
 function brushed() {
