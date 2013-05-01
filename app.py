@@ -107,7 +107,7 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
                                 'c' :self.__get_content(p)})
 
             d = sorted(self.op["timeline"], key=lambda k: k['lc'],reverse=True)
-            for i in range(0,5):
+            for i in range(0,10):
                 d[i]['rt'] = datetime.datetime.fromtimestamp(d[i]['t']).strftime('%Y-%m-%d %H:%M:%S')
                 self.op["max"].append(d[i])
             """
