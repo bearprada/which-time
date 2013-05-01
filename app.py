@@ -26,6 +26,7 @@ import json
 import urlparse
 import urllib
 import httplib2
+import datetime
 
 from tornado.options import define, options
 
@@ -35,21 +36,18 @@ define("port", default=os.environ['PORT'], help="run on the given port", type=in
 # production env
 
 define("facebook_api_key", help="your Facebook application API key",
-       default="423582524399775")
+       default="301523489981408")
 define("facebook_secret", help="your Facebook application secret",
-       default="c535d19c6d09c007e17aaa3fdc5768c4")
+       default="f89208b9085a5a6d487d02ac62f4c64f")
 """
 # test env
-define("facebook_api_key", help="your Facebook application API key",
-       default="443987802343405")
-define("facebook_secret", help="your Facebook application secret",
-       default="c0ebc99f35e9142694eeeb95a37aeb76")
+define("facebook_api_key", help="Facebook application API key", default="443987802343405")
+define("facebook_secret", help="Facebook application secret", default="8a077bcde3dbbd611bb7dcada3ef5b75")
 """
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r"/", Main2Handler),
-            (r"/main", MainHandler),
+            (r"/", MainHandler),
             (r"/locki", FqlReporterHandler),
             (r"/auth/login", AuthLoginHandler),
             (r"/auth/logout", AuthLogoutHandler),
@@ -62,7 +60,6 @@ class Application(tornado.web.Application):
             xsrf_cookies=True,
             facebook_api_key=options.facebook_api_key,
             facebook_secret=options.facebook_secret,
-            ui_modules={"Post": PostModule},
             debug=True,
             autoescape=None,
         )
@@ -76,7 +73,7 @@ class BaseHandler(tornado.web.RequestHandler):
         return tornado.escape.json_decode(user_json)
 
 
-class Main2Handler(BaseHandler):
+class MainHandler(BaseHandler):
     def get(self):
         self.render("index.html",isLogin=(self.get_current_user()!=None))
 
@@ -84,145 +81,59 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
     @tornado.web.authenticated
     @tornado.web.asynchronous
     def get(self):
-        #query = tornado.escape.url_escape('{"post_ids":"SELECT post_id FROM stream WHERE source_id=me() AND likes.count>0 LIMIT 5000",' + \
-        #        '"like_ids":"SELECT name,sex FROM user WHERE uid IN (SELECT user_id FROM like WHERE post_id IN (SELECT post_id FROM #post_ids))"}')
-        query = '{"post_ids":"SELECT post_id FROM stream WHERE source_id=me() AND likes.count>0 LIMIT 5000",' + \
-                '"uids":"SELECT user_id FROM like WHERE post_id IN (SELECT post_id FROM #post_ids)",' +\
-                '"like_ids":"SELECT name,sex,uid FROM user WHERE uid IN (SELECT user_id FROM #uids)"}'
-        self.facebook_request("/fql", self._handle_result,
-                              access_token=self.current_user["access_token"],
-                              q=query)
-        self.o = {'name':'likes' , 'children':[ {'name':'女性','children':[]} ,  {'name':'男性','children':[]}  ]}
+        print "fql start"
+        q = "select message,description,likes.count,comment_info.comment_count, permalink,created_time from stream where source_id=me() and actor_id=me() and likes.can_like=1 limit 5000"
+        self.facebook_request("/fql", self._handle_result, q=q, access_token=self.current_user["access_token"])
+        self.op = {"timeline":[],"max":[]}
         self.set_header('Content-Type', 'application/json')
+
+    def __get_content(self, p):
+        r = ""
+        if p['description'] != None:
+            r = r + p['description']
+        if p['message'] != None:
+            r = r + p['message']
+        return r
 
     def _handle_result(self, r):
         if r is None:
             self._output()
         else:
-            m_r = {}
-            f_r = {}
-            rr = {}
-            for p in r['data'][1]['fql_result_set']:
-                fid = p['user_id']
-                if fid in rr:
-                    rr[fid] = rr[fid] + 1
-                else:
-                    rr[fid] = 1
+            for p in r['data']:
+                self.op["timeline"].append({'t' :p['created_time'] ,
+                                'lc':p['likes']['count'],
+                                'cc':p['comment_info']['comment_count'],
+                                'l' :p['permalink'],
+                                'c' :self.__get_content(p)})
 
-            for u in rr:
-                size = rr[u]
-                if size >5:
-                    user = self._get_user_info(r['data'][2]['fql_result_set'],u)
-                    if user is None:
-                        pass
-                    else:
-                        if user['sex'] == 'female':
-                            self.o['children'][0]['children'].append({'name':user['name'] , 'size':size})        
-                        else:
-                            self.o['children'][1]['children'].append({'name':user['name'] , 'size':size})
+            d = sorted(self.op["timeline"], key=lambda k: k['lc'],reverse=True)
+            for i in range(0,5):
+                d[i]['rt'] = datetime.datetime.fromtimestamp(d[i]['t']).strftime('%Y-%m-%d %H:%M:%S')
+                self.op["max"].append(d[i])
+            """
+            {
+  "data": [
+    {
+      "message": "人生第一次cosplay就上＂頭＂", 
+      "description": null, 
+      "likes": {
+        "count": 79
+      }, 
+      "comment_info": {
+        "comment_count": 7
+      }, 
+      "permalink": "http://www.facebook.com/photo.php?fbid=10151556956832272&set=a.10150181188432272.317527.801377271&type=1", 
+      "created_time": 1367150950
+    }
+  ]
+}
+            """
+
             self._output()
 
-    def _get_user_info(self,user_json,uid):
-        for j in user_json:
-            if j['uid'] == uid:
-                return j
-        return None
-
     def _output(self):
-        self.write(tornado.escape.json_encode(self.o))
+        self.write(tornado.escape.json_encode(self.op))
         self.finish()
-
-class ReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
-    @tornado.web.authenticated
-    @tornado.web.asynchronous
-    def get(self):
-        print "[debug] user = " + str(self.current_user) 
-        self.facebook_request("/me/posts", self._on_like,
-                              access_token=self.current_user["access_token"])
-        self.o = {'name':'likes' , 'children':[]}
-        self.set_header('Content-Type', 'application/json')
-
-        self.limit = 6
-        self.count = 0
-
-    def _get_url_param(self,url,key):
-        parsed = urlparse.urlparse(url)
-        return urlparse.parse_qs(parsed.query)[key]
-
-    def __get_fb_name(self,id):
-        http = httplib2.Http()
-        url = 'https://graph.facebook.com/'+id+'?method=GET&format=json&access_token='+self.current_user["access_token"]
-        print "[get fb name ] url " + url
-        response, content = http.request(url, 'GET')
-        jj = tornado.escape.json_decode(content)
-        return jj['name']
-
-    def _trans_name(self,jn):
-        for j in jn['children']:
-            j['name'] = self.__get_fb_name(j['id'])
-
-    def _output(self):
-        # todo id transfer to name 
-        #self._trans_name(self.o)
-        self.write(tornado.escape.json_encode(self.o))
-        self.finish()
-
-    def _on_like(self,likes):
-        if likes is None:
-            self._output()
-        else:
-            if self.count >= self.limit:
-                self._output()
-            else:
-                r = {}
-                print "[on like] size " + str(len(likes["data"]))
-                for p in likes["data"]:
-                    if p.get('likes',None) != None:
-                        for l in p["likes"]["data"]:
-                            fid = int(l["id"])
-                            if fid in r:
-                                r[fid] = r[fid] +1
-                            else:
-                                r[fid] = 1
-                for k in r:
-                    self.o["children"].append({'name':k , 'size':r[k]})
-
-                self.count = self.count+1
-
-                next = likes["paging"].get('next',None)
-                print "[PAGING] next = " + next 
-                if next != None:
-                    http = httplib2.Http()
-                    response, content = http.request(next, 'GET')
-                    print "[PAGING] result " + str(response) 
-                    self._on_like(tornado.escape.json_decode(content))
-                else:
-                    self._output()
-
-class MainHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
-    @tornado.web.authenticated
-    @tornado.web.asynchronous
-    def get(self):
-        #print "[debug] user = " + str(self.current_user) 
-        #self.facebook_request("/me/home", self._on_stream,
-        self.facebook_request("/me/posts", self.async_callback(self._on_like),
-                              access_token=self.current_user["access_token"])
-        #self._on_like()
-
-    def _on_like(self,likes):
-        #print "get likes : " + str(likes)
-        if likes is None:
-            self.redirect("/auth/login")
-            return
-        self.render("likes.html") 
-
-    def _on_stream(self, stream):
-        if stream is None:
-            # Session may have expired
-            self.redirect("/auth/login")
-            return
-        self.render("stream.html", stream=stream)
-
 
 class AuthLoginHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
     @tornado.web.asynchronous
@@ -241,7 +152,7 @@ class AuthLoginHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
         self.authorize_redirect(redirect_uri=my_url,
                                 client_id=self.settings["facebook_api_key"],
                                 extra_params={"scope": "read_stream"})
-    
+
     def _on_auth(self, user):
         if not user:
             raise tornado.web.HTTPError(500, "Facebook auth failed")
@@ -253,12 +164,6 @@ class AuthLogoutHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
     def get(self):
         self.clear_cookie("user")
         self.redirect(self.get_argument("next", "/"))
-
-
-class PostModule(tornado.web.UIModule):
-    def render(self, post):
-        return self.render_string("modules/post.html", post=post)
-
 
 def main():
     tornado.options.parse_command_line()

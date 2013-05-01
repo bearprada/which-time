@@ -3,11 +3,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Who Most Like You!?</title>
+    <title>Which Time is Better?!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="prada.hsiung">
-
+    <meta name="google-site-verification" content="XjpS_Dqk-8eptXE6ZQCG-gj6pLmonBmcZNRx3CY_Vkk" />
     <!-- Le styles -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <style type="text/css">
@@ -24,6 +24,32 @@
       .ajax_loader {background: url("{{static_url("img/spinner_squares_circle.gif")}}") no-repeat center center transparent;width:100%;height:100%;}
       .blue-loader .ajax_loader {background: url("{{static_url("img/loader_blue.gif")}}") no-repeat center center transparent;}
     </style>
+
+    <style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+path {
+  fill: steelblue;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
+
+</style>
+
     
     <link href="static/css/bootstrap-responsive.min.css" rel="stylesheet">
 
@@ -50,31 +76,13 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="brand" href="#">Who Most Like You?</a>
+          <a class="brand" href="#">Which Time is Better?!</a>
           <div class="nav-collapse collapse">
             <ul class="nav">
               <li class="active"><a href="#">Home</a></li>
               <li><a href="#">About</a></li>
               <li><a href="#">Contact</a></li>
-              <!--<li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
-                <ul class="dropdown-menu">
-                  <li><a href="#">Action</a></li>
-                  <li><a href="#">Another action</a></li>
-                  <li><a href="#">Something else here</a></li>
-                  <li class="divider"></li>
-                  <li class="nav-header">Nav header</li>
-                  <li><a href="#">Separated link</a></li>
-                  <li><a href="#">One more separated link</a></li>
-                </ul>
-              </li>-->
             </ul>
-           <!-- <form class="navbar-form pull-right">
-              <input class="span2" type="text" placeholder="Email">
-              <input class="span2" type="password" placeholder="Password">
-              <button type="submit" class="btn">Sign in</button>
-            </form>
-          </div>--><!--/.nav-collapse -->
           </div>
         </div>
       </div>
@@ -83,8 +91,9 @@
     <div class="container">
       <!--<img src="http://farm9.staticflickr.com/8034/8047426928_d3ac0f2230.jpg" alt="am 7:00">-->
       <div class="hero-unit">
-        <h1>誰最愛按您讚？</h1>
-        <p>該服務將統計所有相關貼文的讚來自哪位朋友，根據次數以及性別做整理，還不快來玩玩看！</p>
+        <h1>什麼時候發文最多人理您？！</h1>
+        <p>明明自己很有人氣，卻有時發文得到讚卻那麼少？明明照片就很可愛，為什麼沒有引起別人的討論？</p>
+        <p>在這裡，您能夠找到屬於自己最佳的發文時間！</p>
         <p>
           {% if isLogin %}
             <button id="btn_start" class="btn btn-large">我也要測試</button>
@@ -96,7 +105,6 @@
 
       <div class="row">
           <div class="result span12">
-            <div id="body2"></div>
           </div>
       </div>
 
@@ -128,8 +136,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="static/js/jquery-1.9.1.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="{{static_url("d3/d3.js")}}"></script>
-    <script type="text/javascript" src="{{static_url("d3/d3.layout.js")}}"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
     <script type="text/javascript" id="loader" src="{{static_url("js/script.js")}}" ></script>
 
 
@@ -141,112 +148,133 @@
           showresult();
       }); 
 
-
     function showresult(){
-      var w = $('.result').width(), //FIXME 
-          h = 600, //FIXME
-          x = d3.scale.linear().range([0, w]),
-          y = d3.scale.linear().range([0, h]),
-          color = d3.scale.category10(),
-          root,
-          node;
+var margin = {top: 10, right: 10, bottom: 100, left: 40},
+    margin2 = {top: 430, right: 10, bottom: 20, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom,
+    height2 = 500 - margin2.top - margin2.bottom;
 
-      var treemap = d3.layout.treemap()
-        .round(false)
-        .size([w, h])
-        .sticky(true)
-        .value(function(d) { return d.size; });
-      var svg = null;
+//var parseDate = d3.time.format("%b %Y").parse;
 
-      d3.json("locki", function(data) {
-        if(progressBox) progressBox.remove();
+var x = d3.time.scale().range([0, width]),
+    x2 = d3.time.scale().range([0, width]),
+    y = d3.scale.linear().range([height, 0]),
+    y2 = d3.scale.linear().range([height2, 0]);
 
-        node = root = data;
-        var nodes = treemap.nodes(root).filter(function(d) { return !d.children; });
-        //TODO clean the svg content before insert data
-        $('#body2').empty();
-        svg = d3.select("#body2").append("div")
-        .attr("class", "chart")
+var xAxis = d3.svg.axis().scale(x).orient("bottom"),
+    xAxis2 = d3.svg.axis().scale(x2).orient("bottom"),
+    yAxis = d3.svg.axis().scale(y).orient("left");
+
+var brush = d3.svg.brush()
+    .x(x2)
+    .on("brush", brushed);
+
+var area = d3.svg.area()
+    .interpolate("monotone")
+    .x(function(d) { return x(d.t); })
+    .y0(height)
+    .y1(function(d) { return y(d.lc); });
+
+var area2 = d3.svg.area()
+    .interpolate("monotone")
+    .x(function(d) { return x2(d.t); })
+    .y0(height2)
+    .y1(function(d) { return y2(d.lc); });
+
+
+var svg = d3.select(".result.span12").append("div")
         .style("width", "100%")
-        .style("height", h + "px")
+        .style("height", "500px")
         .append("svg:svg")
         .attr("width", "100%")
-        .attr("height", h)
-        .append("svg:g")
-        .attr("transform", "translate(.5,.5)");
-        var cell = svg.selectAll("g")
-          .data(nodes)
-          .enter().append("svg:g")
-          .attr("class", "cell")
-          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-          .on("click", function(d) { return zoom(node == d.parent ? root : d.parent); });
+        .attr("height", 500)
 
-        cell.append("svg:rect")
-          .attr("width", function(d) { return d.dx - 1; })
-          .attr("height", function(d) { return d.dy - 1; })
-          .style("fill", function(d) { return color(d.parent.name); });
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height);
 
-        cell.append("svg:text")
-          .attr("x", function(d) { return d.dx / 2; })
-          .attr("y", function(d) { return d.dy / 2; })
-          .attr("dy", ".35em")
-          .attr("text-anchor", "middle")
-          .text(function(d) { return d.name; })
-          .style("opacity", function(d) { d.w = this.getComputedTextLength(); return d.dx > d.w ? 1 : 0; });
-        d3.select(window).on("click", function() { zoom(root); });
+var focus = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        d3.select("select").on("change", function() {
-          treemap.value(this.value == "size" ? size : count).nodes(root);
-          zoom(node);
-        });
+var context = svg.append("g")
+    .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
-        var r = "";
-        var tlen = data.children.length;
-        for(var i = 0 ; i< tlen ; i++){
-          r = r + '<div class="span6"><h3>'+data.children[i].name + '</h3>';
-          var dlen = data.children[i].children.length;
-          for(var j=0;j<dlen;j++){
-            var d = data.children[i].children[j];
-            r = r + '<p>'+d.name + " : " + d.size + "次</p>";
-          }
-          r = r + '</div>'
-        }
-        $('.text_result').html(r);
-      });
+d3.json("locki", function(data_ori) {
+
+  if(progressBox) progressBox.remove();
+
+  // clean the original data
+  //$('#text_result').empty();
+  //$(".result.span12").empty();
 
 
-      function size(d) {
-        return d.size;
-      }
+  var data = data_ori.timeline;
 
-      function count(d) {
-        return 1;
-      }
+  data.forEach(function(d) {
+    d.t = d.t*1000;
+  });
 
-      function zoom(d) {
-        var kx = w / d.dx, ky = h / d.dy;
-        x.domain([d.x, d.x + d.dx]);
-        y.domain([d.y, d.y + d.dy]);
+  x.domain(d3.extent(data.map(function(d) { return d.t; })));
+  y.domain([0, d3.max(data.map(function(d) { return d.lc; }))]);
+  x2.domain(x.domain());
+  y2.domain(y.domain());
 
-        var t = svg.selectAll("g.cell").transition()
-            .duration(d3.event.altKey ? 7500 : 750)
-            .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+  focus.append("path")
+     .datum(data)
+      .attr("clip-path", "url(#clip)")
+      .attr("d", area);
 
-        t.select("rect")
-            .attr("width", function(d) { return kx * d.dx - 1; })
-            .attr("height", function(d) { return ky * d.dy - 1; })
+  focus.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
 
-        t.select("text")
-            .attr("x", function(d) { return kx * d.dx / 2; })
-            .attr("y", function(d) { return ky * d.dy / 2; })
-            .style("opacity", function(d) { return kx * d.dx > d.w ? 1 : 0; });
+  focus.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
 
-        node = d;
-        d3.event.stopPropagation();
-      }
-      
+  context.append("path")
+      .datum(data)
+      .attr("d", area2);
+
+  context.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height2 + ")")
+      .call(xAxis2);
+
+  context.append("g")
+      .attr("class", "x brush")
+      .call(brush)
+    .selectAll("rect")
+      .attr("y", -6)
+      .attr("height", height2 + 7);
+
+
+  var r = "";
+  var max_datas = data_ori.max;
+  var tlen = max_datas.length;
+
+  r = r + '<div class="span10">';
+  for(var i = 0 ; i< tlen ; i++){
+    var d = max_datas[i];
+    r = r + '<h3>' + d.rt + '</h3>' +
+       '<h5><a href="'+d.l+'" target="_blenk">'+d.c + "</a></h5>" +
+       "<p>讚:" + d.lc + "次,留言:" + d.cc+"次</p>";
+  }
+  r = r + '</div>'
+  $('.text_result').html(r);
+
+});
+
+function brushed() {
+  x.domain(brush.empty() ? x2.domain() : brush.extent());
+  focus.select("path").attr("d", area);
+  focus.select(".x.axis").call(xAxis);
+}
     }
-    
     </script>
   </body>
 </html>
