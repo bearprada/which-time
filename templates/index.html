@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Who Most Like You!?</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="prada.hsiung">
+
+    <!-- Le styles -->
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+
+      .result{
+        height:800px;
+      }
+
+      /* Ajax Loader styles */
+      .ajax_loader {background: url("{{static_url("img/spinner_squares_circle.gif")}}") no-repeat center center transparent;width:100%;height:100%;}
+      .blue-loader .ajax_loader {background: url("{{static_url("img/loader_blue.gif")}}") no-repeat center center transparent;}
+    </style>
+    
+    <link href="static/css/bootstrap-responsive.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="../assets/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <!--<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="../assets/ico/favicon.png">-->
+  </head>
+
+  <body class="root">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">Who Most Like You?</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Contact</a></li>
+              <!--<li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li class="nav-header">Nav header</li>
+                  <li><a href="#">Separated link</a></li>
+                  <li><a href="#">One more separated link</a></li>
+                </ul>
+              </li>-->
+            </ul>
+           <!-- <form class="navbar-form pull-right">
+              <input class="span2" type="text" placeholder="Email">
+              <input class="span2" type="password" placeholder="Password">
+              <button type="submit" class="btn">Sign in</button>
+            </form>
+          </div>--><!--/.nav-collapse -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!--<img src="http://farm9.staticflickr.com/8034/8047426928_d3ac0f2230.jpg" alt="am 7:00">-->
+      <div class="hero-unit">
+        <h1>誰最愛按您讚？</h1>
+        <p>該服務將統計所有相關貼文的讚來自哪位朋友，根據次數以及性別做整理，還不快來玩玩看！</p>
+        <p>
+          {% if isLogin %}
+            <button id="btn_start" class="btn btn-large">我也要測試</button>
+          {% else %}
+            <a href="/auth/login" class="btn btn-primary btn-large">登入臉書</a>
+          {% end %}
+        </p>
+      </div>
+
+      <div class="row">
+          <div class="result span12">
+            <div id="body2"></div>
+          </div>
+      </div>
+
+      <div class="row">
+          <div class="text_result">
+          </div>
+      </div>
+
+      <hr>
+      <footer>
+        <div class="fb-like-box" data-href="http://www.facebook.com/pages/Prada-Lab/140352902804510" data-width="250" data-show-faces="false" data-stream="false" data-header="false"></div>
+        <p>&copy; Prada Lab 2013</p>
+      </footer>
+      <div id="fb-root"></div>
+
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/zh_TW/all.js#xfbml=1&appId=354705107982325";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="static/js/jquery-1.9.1.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="{{static_url("d3/d3.js")}}"></script>
+    <script type="text/javascript" src="{{static_url("d3/d3.layout.js")}}"></script>
+    <script type="text/javascript" id="loader" src="{{static_url("js/script.js")}}" ></script>
+
+
+    <script>
+
+      var progressBox = null;
+      $("#btn_start").click(function() {
+          progressBox = new ajaxLoader($('.root'));
+          showresult();
+      }); 
+
+
+    function showresult(){
+      var w = $('.result').width(), //FIXME 
+          h = 600, //FIXME
+          x = d3.scale.linear().range([0, w]),
+          y = d3.scale.linear().range([0, h]),
+          color = d3.scale.category10(),
+          root,
+          node;
+
+      var treemap = d3.layout.treemap()
+        .round(false)
+        .size([w, h])
+        .sticky(true)
+        .value(function(d) { return d.size; });
+      var svg = null;
+
+      d3.json("locki", function(data) {
+        if(progressBox) progressBox.remove();
+
+        node = root = data;
+        var nodes = treemap.nodes(root).filter(function(d) { return !d.children; });
+        //TODO clean the svg content before insert data
+        $('#body2').empty();
+        svg = d3.select("#body2").append("div")
+        .attr("class", "chart")
+        .style("width", "100%")
+        .style("height", h + "px")
+        .append("svg:svg")
+        .attr("width", "100%")
+        .attr("height", h)
+        .append("svg:g")
+        .attr("transform", "translate(.5,.5)");
+        var cell = svg.selectAll("g")
+          .data(nodes)
+          .enter().append("svg:g")
+          .attr("class", "cell")
+          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+          .on("click", function(d) { return zoom(node == d.parent ? root : d.parent); });
+
+        cell.append("svg:rect")
+          .attr("width", function(d) { return d.dx - 1; })
+          .attr("height", function(d) { return d.dy - 1; })
+          .style("fill", function(d) { return color(d.parent.name); });
+
+        cell.append("svg:text")
+          .attr("x", function(d) { return d.dx / 2; })
+          .attr("y", function(d) { return d.dy / 2; })
+          .attr("dy", ".35em")
+          .attr("text-anchor", "middle")
+          .text(function(d) { return d.name; })
+          .style("opacity", function(d) { d.w = this.getComputedTextLength(); return d.dx > d.w ? 1 : 0; });
+        d3.select(window).on("click", function() { zoom(root); });
+
+        d3.select("select").on("change", function() {
+          treemap.value(this.value == "size" ? size : count).nodes(root);
+          zoom(node);
+        });
+
+        var r = "";
+        var tlen = data.children.length;
+        for(var i = 0 ; i< tlen ; i++){
+          r = r + '<div class="span6"><h3>'+data.children[i].name + '</h3>';
+          var dlen = data.children[i].children.length;
+          for(var j=0;j<dlen;j++){
+            var d = data.children[i].children[j];
+            r = r + '<p>'+d.name + " : " + d.size + "次</p>";
+          }
+          r = r + '</div>'
+        }
+        $('.text_result').html(r);
+      });
+
+
+      function size(d) {
+        return d.size;
+      }
+
+      function count(d) {
+        return 1;
+      }
+
+      function zoom(d) {
+        var kx = w / d.dx, ky = h / d.dy;
+        x.domain([d.x, d.x + d.dx]);
+        y.domain([d.y, d.y + d.dy]);
+
+        var t = svg.selectAll("g.cell").transition()
+            .duration(d3.event.altKey ? 7500 : 750)
+            .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+        t.select("rect")
+            .attr("width", function(d) { return kx * d.dx - 1; })
+            .attr("height", function(d) { return ky * d.dy - 1; })
+
+        t.select("text")
+            .attr("x", function(d) { return kx * d.dx / 2; })
+            .attr("y", function(d) { return ky * d.dy / 2; })
+            .style("opacity", function(d) { return kx * d.dx > d.w ? 1 : 0; });
+
+        node = d;
+        d3.event.stopPropagation();
+      }
+      
+    }
+    
+    </script>
+  </body>
+</html>
