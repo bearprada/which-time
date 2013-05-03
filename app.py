@@ -31,6 +31,8 @@ import httplib2
 import pymongo
 import datetime
 from pymongo import MongoClient
+import copy
+
 
 from tornado.options import define, options
 
@@ -54,7 +56,7 @@ define("facebook_secret", help="Facebook application secret", default="8a077bcde
 
 conn = pymongo.Connection(MONGO_URL)
 db = conn['app15412979']
-user_log = db.user_log
+user_log = db.user_log_test
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -99,7 +101,7 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
     @tornado.web.asynchronous
     def get(self):
         print "fql start"
-        q = "select message,description,likes.count,comment_info.comment_count, permalink,created_time from stream where source_id=me() and actor_id=me() and likes.can_like=1 limit 5000"
+        q = "select message,description,likes.count,comment_info.comment_count, permalink,created_time from stream where source_id=me() and actor_id=me() and likes.can_like=1 limit 100"
         self.facebook_request("/fql", self._handle_result, q=q, access_token=self.current_user["access_token"])
         self.op = {"timeline":[],"max":[]}
         self.set_header('Content-Type', 'application/json')
@@ -116,14 +118,17 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
         if r is None:
             self._output()
         else:
+            timeline=[]
             for p in r['data']:
-                self.op["timeline"].append({'t' :p['created_time'] ,
+                timeline.append({'t' :p['created_time'] ,
                                 'lc':p['likes']['count'],
                                 'cc':p['comment_info']['comment_count'],
                                 'l' :p['permalink'],
                                 'c' :self.__get_content(p)})
+            self.op['timeline'] = sorted(timeline, key=lambda k: k['t'])
 
-            d = sorted(self.op["timeline"], key=lambda k: k['lc'],reverse=True)
+            timeline_list = copy.copy(self.op["timeline"])
+            d = sorted(timeline_list, key=lambda k: k['lc'],reverse=True)
             for i in range(0,10):
                 self.op["max"].append(d[i])
             log = { "user": self.current_user,

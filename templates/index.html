@@ -188,17 +188,16 @@ var brush = d3.svg.brush()
     .on("brush", brushed);
 
 var area = d3.svg.area()
-    .interpolate("monotone")
+    //.interpolate("basis-open")
     .x(function(d) { return x(d.t); })
     .y0(height)
     .y1(function(d) { return y(d.lc); });
 
 var area2 = d3.svg.area()
-    .interpolate("monotone")
+    //.interpolate("basis-open")
     .x(function(d) { return x2(d.t); })
     .y0(height2)
     .y1(function(d) { return y2(d.lc); });
-
 
 var svg = d3.select(".result.span12").append("div")
         .style("width", "100%")
