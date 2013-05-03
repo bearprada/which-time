@@ -101,7 +101,7 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
     @tornado.web.asynchronous
     def get(self):
         print "fql start"
-        q = "select message,description,likes.count,comment_info.comment_count, permalink,created_time from stream where source_id=me() and actor_id=me() and likes.can_like=1 limit 100"
+        q = "select message,description,likes.count,comment_info.comment_count, permalink,created_time from stream where source_id=me() and actor_id=me() and likes.can_like=1 limit 5000"
         self.facebook_request("/fql", self._handle_result, q=q, access_token=self.current_user["access_token"])
         self.op = {"timeline":[],"max":[]}
         self.set_header('Content-Type', 'application/json')
