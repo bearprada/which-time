@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Which Time is Better?!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="prada.hsiung">
+    <meta name="google-site-verification" content="XjpS_Dqk-8eptXE6ZQCG-gj6pLmonBmcZNRx3CY_Vkk" />
+    <!-- Le styles -->
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      /* Ajax Loader styles */
+      .ajax_loader {background: url("{{static_url("img/spinner_squares_circle.gif")}}") no-repeat center center transparent;width:100%;height:100%;}
+      .blue-loader .ajax_loader {background: url("{{static_url("img/loader_blue.gif")}}") no-repeat center center transparent;}
+    </style>
+
+    <style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+path {
+  fill: steelblue;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
+
+.title-unit {
+  padding: 60px;
+  margin-bottom: 30px;
+  font-size: 18px;
+  font-weight: 200;
+  line-height: 30px;
+  color: inherit;
+  background-color: rgb(235, 154, 134);
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  border-radius: 6px;
+}
+
+.navbar-inverse .navbar-inner {
+  background-color:red;
+}
+
+</style>
+
+    
+    <link href="static/css/bootstrap-responsive.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="../assets/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <!--<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="../assets/ico/favicon.png">-->
+  </head>
+
+  <body class="root">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">Which Time is Better?!</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!--<img src="http://farm9.staticflickr.com/8034/8047426928_d3ac0f2230.jpg" alt="am 7:00">-->
+      <div class="title-unit">
+        <h1>什麼時候發文最多人理您？！</h1>
+        <p>明明自己很有人氣，卻有時發文得到讚卻那麼少？明明照片就很可愛，為什麼沒有引起別人的討論？</p>
+        <p>在這裡，您能夠找到屬於自己最佳的發文時間！</p>
+        <p>
+          {% if isLogin %}
+            <button id="btn_start" class="btn btn-large">我也要測試</button>
+          {% else %}
+            <a href="/auth/login" class="btn btn-primary btn-large">登入臉書</a>
+          {% end %}
+            <button id="btn-share" class="btn btn-large" style="display: none;">分享統計結果</button>
+        </p>
+      </div>
+
+      <div class="row">
+          <div class="result span12">
+          </div>
+      </div>
+
+      <div class="row">
+          <div class="text_result">
+          </div>
+      </div>
+
+      <hr>
+      <footer>
+        <div class="fb-like-box" data-href="http://www.facebook.com/pages/Prada-Lab/140352902804510" data-width="250" data-show-faces="false" data-stream="false" data-header="false"></div>
+        <p>&copy; Prada Lab 2013</p>
+      </footer>
+      <div id="fb-root"></div>
+    </div> <!-- /container -->
+
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/zh_TW/all.js#xfbml=1&appId=354705107982325";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="static/js/jquery-1.9.1.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script type="text/javascript" id="loader" src="{{static_url("js/script.js")}}" ></script>
+    <script src="https://raw.github.com/timrwood/moment/2.0.0/min/moment.min.js"></script>
+
+    <script>
+      var analysisedContent = "";
+
+      var progressBox = null;
+      $("#btn_start").click(function() {
+          progressBox = new ajaxLoader($('.root'));
+          showresult();
+      });
+
+      $("#btn-share").click(function() {
+        console.log(analysisedContent);
+        window.open("https://www.facebook.com/dialog/feed?app_id=301523489981408&link=http://which-time.herokuapp.com&picture=http://farm6.staticflickr.com/5014/5533213776_5d0664272a.jpg&name=Which Time&caption=找到屬於自己最佳的發文時間!&description="+analysisedContent+"&redirect_uri=http://which-time.herokuapp.com",'分享');
+      });
+
+    function showresult(){
+var margin = {top: 10, right: 10, bottom: 100, left: 40},
+    margin2 = {top: 430, right: 10, bottom: 20, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom,
+    height2 = 500 - margin2.top - margin2.bottom;
+
+//var parseDate = d3.time.format("%b %Y").parse;
+
+var x = d3.time.scale().range([0, width]),
+    x2 = d3.time.scale().range([0, width]),
+    y = d3.scale.linear().range([height, 0]),
+    y2 = d3.scale.linear().range([height2, 0]);
+
+var xAxis = d3.svg.axis().scale(x).orient("bottom"),
+    xAxis2 = d3.svg.axis().scale(x2).orient("bottom"),
+    yAxis = d3.svg.axis().scale(y).orient("left");
+
+var brush = d3.svg.brush()
+    .x(x2)
+    .on("brush", brushed);
+
+var area = d3.svg.area()
+    //.interpolate("basis-open")
+    .x(function(d) { return x(d.t); })
+    .y0(height)
+    .y1(function(d) { return y(d.lc); });
+
+var area2 = d3.svg.area()
+    //.interpolate("basis-open")
+    .x(function(d) { return x2(d.t); })
+    .y0(height2)
+    .y1(function(d) { return y2(d.lc); });
+
+var svg = d3.select(".result.span12").append("div")
+        .style("width", "100%")
+        .style("height", "500px")
+        .append("svg:svg")
+        .attr("width", "100%")
+        .attr("height", 500)
+
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+
+var focus = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var context = svg.append("g")
+    .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+d3.json("locki", function(data_ori) {
+
+  if(progressBox) progressBox.remove();
+
+  // clean the original data
+  //$('#text_result').empty();
+  //$(".result.span12").empty();
+  $("#btn-share").show();
+
+  var data = data_ori.timeline;
+
+  data.forEach(function(d) {
+    d.t = d.t*1000;
+  });
+
+  x.domain(d3.extent(data.map(function(d) { return d.t; })));
+  y.domain([0, d3.max(data.map(function(d) { return d.lc; }))]);
+  x2.domain(x.domain());
+  y2.domain(y.domain());
+
+  focus.append("path")
+     .datum(data)
+      .attr("clip-path", "url(#clip)")
+      .attr("d", area);
+
+  focus.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  focus.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
+
+  context.append("path")
+      .datum(data)
+      .attr("d", area2);
+
+  context.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height2 + ")")
+      .call(xAxis2);
+
+  context.append("g")
+      .attr("class", "x brush")
+      .call(brush)
+    .selectAll("rect")
+      .attr("y", -6)
+      .attr("height", height2 + 7);
+
+
+  var r = "";
+  var max_datas = data_ori.max;
+  var tlen = max_datas.length;
+
+  r = r + '<div class="row">';
+  //TODO add share button
+  for(var i = 0 ; i< tlen ; i++){
+    var d = max_datas[i];
+    var t = moment.unix(d.t).format('MMMM Do YYYY, h:mm:ss a');
+    analysisedContent += "   NO"+(i+1)+". "+d.c+" 讚:"+d.lc+" 留言:"+d.cc+" "+t+"\n";
+    r = r + '<div class="span6"><h3>' + t + '</h3>' +
+       '<p><a href="'+d.l+'" target="_blenk">'+d.c + "</a></p>" +
+       "<p>讚:" + d.lc + "次,留言:" + d.cc+"次</p></div>";
+  }
+  r = r + '</div>'
+  $('.text_result').html(r);
+});
+
+function brushed() {
+  x.domain(brush.empty() ? x2.domain() : brush.extent());
+  focus.select("path").attr("d", area);
+  focus.select(".x.axis").call(xAxis);
+}
+    }
+    </script>
+  </body>
+</html>

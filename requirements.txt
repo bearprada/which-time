@@ -1,0 +1,5 @@
+Flask==0.8
+gunicorn==0.13.4
+tornado==2.3
+httplib2==0.7.6
+pymongo==2.5
