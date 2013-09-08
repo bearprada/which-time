@@ -38,24 +38,16 @@ from tornado.options import define, options
 
 define("port", default=os.environ['PORT'], help="run on the given port", type=int)
 
-
-MONGO_URL ='mongodb://prada:888999@linus.mongohq.com:10038/app15412979'
-
-
-# production env
+# example : mongodb://USERNAME:PASSWORD@DOMAIN:PORT/COLLECTION
+MONGO_URL =''
 
 define("facebook_api_key", help="your Facebook application API key",
-       default="301523489981408")
+       default="YOUR_FACEBOOK_API_KEY")
 define("facebook_secret", help="your Facebook application secret",
-       default="f89208b9085a5a6d487d02ac62f4c64f")
-"""
-# test env
-define("facebook_api_key", help="Facebook application API key", default="443987802343405")
-define("facebook_secret", help="Facebook application secret", default="8a077bcde3dbbd611bb7dcada3ef5b75")
-"""
+       default="YOUR_FACEBOOK_API_SECRECT")
 
 conn = pymongo.Connection(MONGO_URL)
-db = conn['app15412979']
+db = conn['YOUR_MONGO_COLLECTION']
 user_log = db.user_log_test
 
 class Application(tornado.web.Application):
@@ -135,25 +127,6 @@ class FqlReporterHandler(BaseHandler, tornado.auth.FacebookGraphMixin):
                     "result": self.op["max"],
                     "date": datetime.datetime.utcnow()}
             log_id = user_log.insert(log)
-            print log_id
-            """
-            {
-  "data": [
-    {
-      "message": "人生第一次cosplay就上＂頭＂", 
-      "description": null, 
-      "likes": {
-        "count": 79
-      }, 
-      "comment_info": {
-        "comment_count": 7
-      }, 
-      "permalink": "http://www.facebook.com/photo.php?fbid=10151556956832272&set=a.10150181188432272.317527.801377271&type=1", 
-      "created_time": 1367150950
-    }
-  ]
-}
-            """
             self._output()
 
     def _output(self):
